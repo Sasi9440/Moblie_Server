@@ -1,3 +1,5 @@
+https://github.com/user-attachments/assets/9c1c2ae8-ceb5-4f05-92dc-7a3e7a29a75e
+
 # MobileLLMServer
 
 A local LLM inference server built on top of [llama.cpp](https://github.com/ggml-org/llama.cpp) — designed to run large language models efficiently on local hardware, including mobile-class and edge devices. It exposes an OpenAI-compatible REST API, making it easy to integrate with any client that supports the OpenAI API format.
