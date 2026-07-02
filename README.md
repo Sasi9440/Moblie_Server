@@ -12,6 +12,9 @@ A local LLM inference server built on top of [llama.cpp](https://github.com/ggml
 Client (mobile app / browser / API tool)
         │
         ▼
+  Cloudflare Tunnel (public HTTPS URL)
+        │
+        ▼
   llama-server (HTTP REST API on port 8080)
         │
         ▼
@@ -23,7 +26,8 @@ Client (mobile app / browser / API tool)
 
 1. **llama.cpp** loads a GGUF-format model file into memory and runs inference using optimized C++ kernels
 2. **llama-server** wraps the inference engine with an HTTP server exposing OpenAI-compatible endpoints (`/v1/chat/completions`, `/v1/completions`, `/embedding`, etc.)
-3. Any client — mobile app, browser, or tool — can send requests to the server just like it would to the OpenAI API
+3. **Cloudflare Tunnel** (`cloudflared`) creates a secure public HTTPS URL that forwards traffic to your local server — no port forwarding or static IP needed
+4. Any client — mobile app, browser, or tool — can send requests to the public Cloudflare URL just like it would to the OpenAI API
 
 ---
 
@@ -130,6 +134,131 @@ curl http://localhost:8080/v1/completions \
     "n_predict": 100
   }'
 ```
+
+---
+
+## Public Deployment with Cloudflare Tunnel
+
+Cloudflare Tunnel exposes your local `llama-server` to the internet securely without opening firewall ports or needing a static IP. It works by running a lightweight `cloudflared` daemon on your machine that connects outbound to Cloudflare's edge network.
+
+### How it works
+
+```
+Internet Client
+      │
+      ▼
+ Cloudflare Edge (your-tunnel.trycloudflare.com)
+      │  (encrypted outbound tunnel)
+      ▼
+ cloudflared (running on your machine)
+      │
+      ▼
+ llama-server (localhost:8080)
+```
+
+### Quick Start (no account needed)
+
+The fastest way — generates a temporary public URL instantly:
+
+```bash
+# Install cloudflared (Windows)
+winget install Cloudflare.cloudflared
+
+# Install cloudflared (macOS)
+brew install cloudflared
+
+# Install cloudflared (Linux)
+curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o cloudflared
+chmod +x cloudflared && sudo mv cloudflared /usr/local/bin
+```
+
+Start your llama-server first, then run the tunnel:
+
+```bash
+# Step 1 — start the LLM server
+./build/bin/llama-server -m models/your-model.gguf --port 8080
+
+# Step 2 — in a new terminal, expose it publicly
+cloudflared tunnel --url http://localhost:8080
+```
+
+You'll see output like:
+
+```
+INF +--------------------------------------------------------------------------------------------+
+INF |  Your quick Tunnel has been created! Visit it at (it may take some time to be reachable):  |
+INF |  https://your-random-name.trycloudflare.com                                                |
+INF +--------------------------------------------------------------------------------------------+
+```
+
+Your server is now publicly accessible at `https://your-random-name.trycloudflare.com`
+
+### Persistent Tunnel (with Cloudflare account)
+
+For a stable, named URL that survives restarts:
+
+```bash
+# 1. Login to Cloudflare
+cloudflared tunnel login
+
+# 2. Create a named tunnel
+cloudflared tunnel create llm-server
+
+# 3. Route your domain to the tunnel
+cloudflared tunnel route dns llm-server llm.yourdomain.com
+
+# 4. Start the tunnel
+cloudflared tunnel run --url http://localhost:8080 llm-server
+```
+
+### Run as a Background Service
+
+```bash
+# Install as a system service (runs on boot)
+sudo cloudflared service install
+sudo systemctl start cloudflared   # Linux
+```
+
+On Windows, run in an elevated terminal:
+
+```cmd
+cloudflared service install
+sc start cloudflared
+```
+
+### Use the Public URL with any OpenAI client
+
+Once the tunnel is running, replace `localhost:8080` with your Cloudflare URL:
+
+```bash
+curl https://your-random-name.trycloudflare.com/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "local",
+    "messages": [
+      { "role": "user", "content": "Hello from the internet!" }
+    ]
+  }'
+```
+
+Or configure any OpenAI-compatible SDK:
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://your-random-name.trycloudflare.com/v1",
+    api_key="none"  # no key needed for local server
+)
+
+response = client.chat.completions.create(
+    model="local",
+    messages=[{"role": "user", "content": "Hello!"}]
+)
+print(response.choices[0].message.content)
+```
+
+> **Note:** The quick tunnel URL changes every time you restart `cloudflared`. Use a persistent named tunnel with your own domain for a stable URL.
 
 ---
 
