@@ -107,6 +107,24 @@ Once running:
 - Text completions → `http://localhost:8080/v1/completions`
 - Embeddings → `http://localhost:8080/v1/embeddings`
 
+### Access from other devices on the same network (LAN)
+
+The server binds to all interfaces by default, so any device on the same Wi-Fi or local network can reach it using your machine's local IP:
+
+```
+http://10.64.188.227:8080
+```
+
+| Endpoint | LAN URL |
+|---|---|
+| Web UI | `http://10.64.188.227:8080` |
+| Chat completions | `http://10.64.188.227:8080/v1/chat/completions` |
+| Text completions | `http://10.64.188.227:8080/v1/completions` |
+| Embeddings | `http://10.64.188.227:8080/v1/embeddings` |
+| Models list | `http://10.64.188.227:8080/v1/models` |
+
+> Your LAN IP may change. Run `ipconfig` (Windows) or `ip a` (Linux/macOS) to find your current local IP.
+
 ---
 
 ## API Usage
@@ -192,6 +210,17 @@ INF +---------------------------------------------------------------------------
 ```
 
 Your server is now publicly accessible at `https://your-random-name.trycloudflare.com`
+
+**Live example URL (currently active):**
+
+| Endpoint | Public URL |
+|---|---|
+| Models list | [`https://lucia-foto-ent-bit.trycloudflare.com/v1/models`](https://lucia-foto-ent-bit.trycloudflare.com/v1/models) |
+| Chat completions | `https://lucia-foto-ent-bit.trycloudflare.com/v1/chat/completions` |
+| Text completions | `https://lucia-foto-ent-bit.trycloudflare.com/v1/completions` |
+| Embeddings | `https://lucia-foto-ent-bit.trycloudflare.com/v1/embeddings` |
+
+> This is a quick tunnel URL and will change on restart. See [Persistent Tunnel](#persistent-tunnel-with-cloudflare-account) for a stable URL.
 
 ### Persistent Tunnel (with Cloudflare account)
 
